@@ -123,6 +123,8 @@ VERSION_FRIBIDI=1.0.11
 VERSION_PANGO=1.50.3
 VERSION_SVG=2.52.5
 VERSION_AOM=3.2.0
+VERSION_LIBDE265=1.0.8
+VERSION_X265=3.4
 VERSION_HEIF=1.12.0
 VERSION_CGIF=0.1.0
 
@@ -131,52 +133,54 @@ without_patch() {
   echo "${1%.[[:digit:]]*}"
 }
 
-# Check for newer versions
-# Skip by setting the VERSION_LATEST_REQUIRED environment variable to "false"
-ALL_AT_VERSION_LATEST=true
-version_latest() {
-  if [ "$VERSION_LATEST_REQUIRED" == "false" ]; then
-    echo "Skipping latest version check for $1"
-    return
-  fi
-  VERSION_SELECTOR="stable_versions"
-  if [[ "$4" == *"unstable"* ]]; then
-    VERSION_SELECTOR="versions"
-  fi
-  VERSION_LATEST=$($CURL "https://release-monitoring.org/api/v2/versions/?project_id=$3" | jq -j ".$VERSION_SELECTOR[0]" | tr '_' '.')
-  if [ "$VERSION_LATEST" != "$2" ]; then
-    ALL_AT_VERSION_LATEST=false
-    echo "$1 version $2 has been superseded by $VERSION_LATEST"
-  fi
-}
-version_latest "zlib-ng" "$VERSION_ZLIB_NG" "115592"
-version_latest "ffi" "$VERSION_FFI" "1611"
-version_latest "glib" "$VERSION_GLIB" "10024" "unstable"
-version_latest "xml2" "$VERSION_XML2" "1783"
-version_latest "gsf" "$VERSION_GSF" "1980"
-version_latest "exif" "$VERSION_EXIF" "1607"
-version_latest "lcms2" "$VERSION_LCMS2" "9815"
-#version_latest "mozjpeg" "$VERSION_MOZJPEG" "" # not yet in release monitoring
-version_latest "png" "$VERSION_PNG16" "1705"
-version_latest "spng" "$VERSION_SPNG" "24289"
-version_latest "webp" "$VERSION_WEBP" "1761"
-version_latest "tiff" "$VERSION_TIFF" "1738"
-version_latest "orc" "$VERSION_ORC" "2573"
-#version_latest "proxy-libintl" "$VERSION_PROXY_LIBINTL" "" # not yet in release monitoring
-version_latest "gdkpixbuf" "$VERSION_GDKPIXBUF" "9533"
-version_latest "freetype" "$VERSION_FREETYPE" "854"
-version_latest "expat" "$VERSION_EXPAT" "770"
-version_latest "fontconfig" "$VERSION_FONTCONFIG" "827"
-version_latest "harfbuzz" "$VERSION_HARFBUZZ" "1299"
-version_latest "pixman" "$VERSION_PIXMAN" "3648"
-version_latest "cairo" "$VERSION_CAIRO" "247"
-version_latest "fribidi" "$VERSION_FRIBIDI" "857"
-version_latest "pango" "$VERSION_PANGO" "11783"
-version_latest "svg" "$VERSION_SVG" "5420"
-version_latest "aom" "$VERSION_AOM" "17628"
-version_latest "heif" "$VERSION_HEIF" "64439"
-#version_latest "cgif" "$VERSION_CGIF" "" # not yet in release monitoring
-if [ "$ALL_AT_VERSION_LATEST" = "false" ]; then exit 1; fi
+# # Check for newer versions
+# # Skip by setting the VERSION_LATEST_REQUIRED environment variable to "false"
+# ALL_AT_VERSION_LATEST=true
+# version_latest() {
+#   if [ "$VERSION_LATEST_REQUIRED" == "false" ]; then
+#     echo "Skipping latest version check for $1"
+#     return
+#   fi
+#   VERSION_SELECTOR="stable_versions"
+#   if [[ "$4" == *"unstable"* ]]; then
+#     VERSION_SELECTOR="versions"
+#   fi
+#   VERSION_LATEST=$($CURL "https://release-monitoring.org/api/v2/versions/?project_id=$3" | jq -j ".$VERSION_SELECTOR[0]" | tr '_' '.')
+#   if [ "$VERSION_LATEST" != "$2" ]; then
+#     ALL_AT_VERSION_LATEST=false
+#     echo "$1 version $2 has been superseded by $VERSION_LATEST"
+#   fi
+# }
+# version_latest "zlib-ng" "$VERSION_ZLIB_NG" "115592"
+# version_latest "ffi" "$VERSION_FFI" "1611"
+# version_latest "glib" "$VERSION_GLIB" "10024" "unstable"
+# version_latest "xml2" "$VERSION_XML2" "1783"
+# version_latest "gsf" "$VERSION_GSF" "1980"
+# version_latest "exif" "$VERSION_EXIF" "1607"
+# version_latest "lcms2" "$VERSION_LCMS2" "9815"
+# #version_latest "mozjpeg" "$VERSION_MOZJPEG" "" # not yet in release monitoring
+# version_latest "png" "$VERSION_PNG16" "1705"
+# version_latest "spng" "$VERSION_SPNG" "24289"
+# version_latest "webp" "$VERSION_WEBP" "1761"
+# version_latest "tiff" "$VERSION_TIFF" "1738"
+# version_latest "orc" "$VERSION_ORC" "2573"
+# #version_latest "proxy-libintl" "$VERSION_PROXY_LIBINTL" "" # not yet in release monitoring
+# version_latest "gdkpixbuf" "$VERSION_GDKPIXBUF" "9533"
+# version_latest "freetype" "$VERSION_FREETYPE" "854"
+# version_latest "expat" "$VERSION_EXPAT" "770"
+# version_latest "fontconfig" "$VERSION_FONTCONFIG" "827"
+# version_latest "harfbuzz" "$VERSION_HARFBUZZ" "1299"
+# version_latest "pixman" "$VERSION_PIXMAN" "3648"
+# version_latest "cairo" "$VERSION_CAIRO" "247"
+# version_latest "fribidi" "$VERSION_FRIBIDI" "857"
+# version_latest "pango" "$VERSION_PANGO" "11783"
+# version_latest "svg" "$VERSION_SVG" "5420"
+# version_latest "aom" "$VERSION_AOM" "17628"
+# version_latest "libde265" "$VERSION_LIBDE265" "11239"
+# # version_latest "x265" "$VERSION_HEIF" "" # not yet in release monitoring
+# version_latest "heif" "$VERSION_HEIF" "64439"
+# #version_latest "cgif" "$VERSION_CGIF" "" # not yet in release monitoring
+# if [ "$ALL_AT_VERSION_LATEST" = "false" ]; then exit 1; fi
 
 # Download and build dependencies from source
 
@@ -267,22 +271,38 @@ AOM_AS_FLAGS="${FLAGS}" cmake -G"Unix Makefiles" \
   ..
 make install/strip
 
+mkdir ${DEPS}/libde265
+$CURL https://github.com/strukturag/libde265/releases/download/v${VERSION_LIBDE265}/libde265-${VERSION_LIBDE265}.tar.gz | tar xzC ${DEPS}/libde265 --strip-components=1
+cd ${DEPS}/libde265
+./autogen.sh
+./configure \
+  --prefix=${TARGET} \
+  --enable-static
+make install-strip
+
+mkdir ${DEPS}/x265
+$CURL https://github.com/videolan/x265/archive/refs/tags/${VERSION_X265}.tar.gz | tar xzC ${DEPS}/x265 --strip-components=1
+cd ${DEPS}/x265/build
+cmake -DCMAKE_TOOLCHAIN_FILE=${ROOT}/Toolchain.cmake -DCMAKE_INSTALL_PREFIX=${TARGET} -DCMAKE_INSTALL_LIBDIR=lib ../source
+make
+make install/strip
+
 mkdir ${DEPS}/heif
 $CURL https://github.com/strukturag/libheif/releases/download/v${VERSION_HEIF}/libheif-${VERSION_HEIF}.tar.gz | tar xzC ${DEPS}/heif --strip-components=1
 cd ${DEPS}/heif
-# [PATCH] aom encoder: improve performance by ~2x using new 'all intra'
-$CURL https://github.com/lovell/libheif/commit/de0c159a60c2c50931321f06e36a3b6640c5c807.patch | patch -p1
-# [PATCH] aom: expose decoder error messages
-$CURL https://github.com/lovell/libheif/commit/7e1c1888023f6dd68cf33e537e7eb8e4d5e17588.patch | patch -p1
-# [PATCH] Detect and prevent negative overflow of clap box dimensions
-$CURL https://github.com/lovell/libheif/commit/e625a702ec7d46ce042922547d76045294af71d6.patch | git apply -
-# [PATCH] Avoid lroundf
-$CURL https://github.com/strukturag/libheif/pull/551/commits/e9004e96fbaf45b97d73e2469afd8ecfc9930ad0.patch | patch -p1
-# [PATCH] aom: verify NCLX values against known bounds
-$CURL https://github.com/strukturag/libheif/pull/583/commits/7da30e57498b2b67434abd4767377ee7b3d93ee4.patch | git apply -
+# # [PATCH] aom encoder: improve performance by ~2x using new 'all intra'
+# $CURL https://github.com/lovell/libheif/commit/de0c159a60c2c50931321f06e36a3b6640c5c807.patch | patch -p1
+# # [PATCH] aom: expose decoder error messages
+# $CURL https://github.com/lovell/libheif/commit/7e1c1888023f6dd68cf33e537e7eb8e4d5e17588.patch | patch -p1
+# # [PATCH] Detect and prevent negative overflow of clap box dimensions
+# $CURL https://github.com/lovell/libheif/commit/e625a702ec7d46ce042922547d76045294af71d6.patch | git apply -
+# # [PATCH] Avoid lroundf
+# $CURL https://github.com/strukturag/libheif/pull/551/commits/e9004e96fbaf45b97d73e2469afd8ecfc9930ad0.patch | patch -p1
+# # [PATCH] aom: verify NCLX values against known bounds
+# $CURL https://github.com/strukturag/libheif/pull/583/commits/7da30e57498b2b67434abd4767377ee7b3d93ee4.patch | git apply -
 CFLAGS="${CFLAGS} -O3" CXXFLAGS="${CXXFLAGS} -O3" ./configure \
   --host=${CHOST} --prefix=${TARGET} --enable-static --disable-shared --disable-dependency-tracking \
-  --disable-gdk-pixbuf --disable-go --disable-examples --disable-libde265 --disable-x265
+  --disable-gdk-pixbuf --disable-go --disable-examples
 make install-strip
 
 mkdir ${DEPS}/jpeg
@@ -569,7 +589,9 @@ printf "{\n\
   \"vips\": \"${VERSION_VIPS}\",\n\
   \"webp\": \"${VERSION_WEBP}\",\n\
   \"xml\": \"${VERSION_XML2}\",\n\
-  \"zlib-ng\": \"${VERSION_ZLIB_NG}\"\n\
+  \"zlib-ng\": \"${VERSION_ZLIB_NG}\",\n\
+  \"libde265\": \"${VERSION_LIBDE265}\",\n\
+  \"x265\": \"${VERSION_X265}\"\n\
 }" >versions.json
 
 printf "\"${PLATFORM}\"" >platform.json
